@@ -16,8 +16,7 @@ export const cwd = toPosix(process.cwd());
 export const resolve = (...paths: string[]) =>
   paths.length === 1 ? path.posix.join(cwd, paths[0]) : path.posix.resolve(...paths);
 
-export const relative = (from: string, to?: string) =>
-  path.posix.relative(to ? toPosix(from) : cwd, toPosix(to ?? from));
+export const relative = (from: string, to?: string) => toPosix(path.relative(to ? from : cwd, to ?? from));
 
 export const isInNodeModules = (filePath: string) => filePath.includes('node_modules');
 
