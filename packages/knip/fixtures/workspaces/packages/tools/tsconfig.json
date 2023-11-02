@@ -1,0 +1,6 @@
+{
+  "extends": "@workspaces/tsconfig/tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": "./"
+  }
+}

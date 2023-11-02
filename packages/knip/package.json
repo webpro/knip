@@ -1,0 +1,156 @@
+{
+  "name": "knip",
+  "version": "2.38.6",
+  "description": "Find unused files, dependencies and exports in your TypeScript and JavaScript projects",
+  "homepage": "https://github.com/webpro/knip",
+  "repository": "github:webpro/knip",
+  "bugs": "https://github.com/webpro/knip/issues",
+  "license": "ISC",
+  "author": {
+    "name": "Lars Kappert",
+    "email": "lars@webpro.nl"
+  },
+  "main": "./dist/index.js",
+  "bin": {
+    "knip": "./bin/knip.js"
+  },
+  "type": "module",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "knip": "node ./dist/cli.js --directory ../..",
+    "knip:production": "node ./dist/cli.js --directory ../.. --production --strict --ignore-internal",
+    "lint": "eslint scripts src test",
+    "lint:fix": "eslint scripts src test --fix",
+    "format": "prettier scripts src test schema.json --with-node-modules --write --config .prettierrc",
+    "pretest": "node rmdir.js tmp && swc src -d tmp/src && swc test -d tmp/test",
+    "test": "node --no-warnings --test tmp",
+    "coverage": "c8 --reporter html node --no-warnings --loader tsx --test test/*.test.ts test/*/*.test.ts",
+    "watch": "rm $(which knip); npm link && tsc --watch",
+    "prebuild": "node rmdir.js dist",
+    "build": "tsc",
+    "docs": "npm run docs:cli && npm run docs:plugins && npm run docs:format",
+    "docs:cli": "tsx ./scripts/update-cli-usage-in-readme.ts",
+    "docs:plugins": "tsx ./scripts/generate-plugin-docs.ts",
+    "docs:format": "remark README.md docs/*.md .github/*.md src/plugins/*/README.md -o",
+    "qa": "npm run lint && npm run build && npm run knip && npm run knip:production && npm test",
+    "release": "release-it",
+    "create-plugin": "tsx --no-warnings ./scripts/create-new-plugin.ts",
+    "postcreate-plugin": "prettier schema.json src/ConfigurationValidator.ts --write --config .prettierrc --log-level silent"
+  },
+  "files": [
+    "dist",
+    "schema.json"
+  ],
+  "dependencies": {
+    "@ericcornelissen/bash-parser": "^0.5.2",
+    "@npmcli/map-workspaces": "^3.0.4",
+    "@pkgjs/parseargs": "0.11.0",
+    "@pnpm/logger": "5.0.0",
+    "@pnpm/workspace.pkgs-graph": "2.0.10",
+    "@snyk/github-codeowners": "^1.1.0",
+    "chalk": "^5.2.0",
+    "easy-table": "^1.2.0",
+    "fast-glob": "^3.2.12",
+    "globby": "^13.1.3",
+    "jiti": "1.21.0",
+    "js-yaml": "^4.1.0",
+    "micromatch": "^4.0.5",
+    "minimist": "^1.2.8",
+    "pretty-ms": "^8.0.0",
+    "strip-json-comments": "^5.0.0",
+    "summary": "^2.1.0",
+    "typescript": "^5.0.2",
+    "zod": "3.22.4",
+    "zod-validation-error": "1.5.0"
+  },
+  "devDependencies": {
+    "@jest/types": "29.6.3",
+    "@npmcli/package-json": "5.0.0",
+    "@release-it/bumper": "5.1.0",
+    "@swc/cli": "0.1.62",
+    "@swc/core": "1.3.95",
+    "@types/eslint": "8.44.6",
+    "@types/js-yaml": "4.0.8",
+    "@types/micromatch": "4.0.4",
+    "@types/minimist": "1.2.4",
+    "@types/node": "20.8.10",
+    "@types/npmcli__map-workspaces": "3.0.3",
+    "@types/npmcli__package-json": "4.0.2",
+    "@types/pkgjs__parseargs": "0.10.2",
+    "@types/webpack": "5.28.4",
+    "@typescript-eslint/eslint-plugin": "6.9.1",
+    "@typescript-eslint/parser": "6.9.1",
+    "c8": "8.0.1",
+    "eslint": "8.52.0",
+    "eslint-import-resolver-typescript": "3.6.1",
+    "eslint-plugin-import": "2.29.0",
+    "eslint-plugin-n": "16.2.0",
+    "playwright": "1.39.0",
+    "prettier": "3.0.3",
+    "release-it": "16.2.1",
+    "remark-cli": "12.0.0",
+    "remark-preset-webpro": "1.0.0",
+    "tsx": "3.14.0",
+    "type-fest": "4.6.0"
+  },
+  "engines": {
+    "node": ">=16.17.0 <17 || >=18.6.0"
+  },
+  "engineStrict": true,
+  "release-it": {
+    "hooks": {
+      "before:init": [
+        "npm run lint",
+        "npm run build",
+        "npm run knip",
+        "npm run knip:production",
+        "npm run docs",
+        "npm test"
+      ]
+    },
+    "github": {
+      "release": true,
+      "comments": {
+        "submit": true
+      }
+    },
+    "plugins": {
+      "@release-it/bumper": {
+        "out": "{dist,src}/version.*"
+      }
+    }
+  },
+  "remarkConfig": {
+    "plugins": [
+      "preset-webpro"
+    ]
+  },
+  "keywords": [
+    "find",
+    "detect",
+    "analyze",
+    "scan",
+    "lint",
+    "unused",
+    "unreferenced",
+    "unresolved",
+    "missing",
+    "unimported",
+    "files",
+    "dependencies",
+    "devDependencies",
+    "exports",
+    "types",
+    "members",
+    "namespaces",
+    "duplicates",
+    "typescript",
+    "maintenance",
+    "class",
+    "enum",
+    "members",
+    "workspace",
+    "workspaces",
+    "monorepo"
+  ]
+}

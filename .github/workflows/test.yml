@@ -32,8 +32,8 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: 'npm'
       - run: npm ci
-      - run: npm run lint
-      - run: npm run build
+      - run: npm run lint --workspaces
+      - run: npm run build --workspaces
       - run: npm run knip
       - run: npm run knip:production
-      - run: npm test
+      - run: npm test --workspaces

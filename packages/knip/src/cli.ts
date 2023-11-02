@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 import './util/register.js';
 import prettyMilliseconds from 'pretty-ms';
 import parsedArgValues, { helpText } from './util/cli-arguments.js';

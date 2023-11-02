@@ -16,9 +16,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: oven-sh/setup-bun@v1
+      - run: rm package-lock.json
       - run: bun install
-      - run: bun run build
-      - run: bun link
+      - run: cd packages/knip && bun run build && cd -
 
       - name: Test Knip against create-typescript-app
         uses: actions/checkout@v3
@@ -26,8 +26,7 @@ jobs:
           repository: JoshuaKGoldberg/create-typescript-app
           path: create-typescript-app
       - run: bun install
-      - run: bun link knip
-      - run: bun knip
+      - run: bun --bun ../knip/packages/knip/dist/cli.js
 
       - name: Test Knip against slonik
         uses: actions/checkout@v3
@@ -35,8 +34,7 @@ jobs:
           repository: gajus/slonik
           path: slonik
       - run: bun install
-      - run: bun link knip
-      - run: bun knip
+      - run: bun --bun ../knip/packages/knip/dist/cli.js
 
       - name: Test Knip against 10ten-ja-reader
         uses: actions/checkout@v3
@@ -44,8 +42,7 @@ jobs:
           repository: birchill/10ten-ja-reader
           path: 10ten-ja-reader
       - run: bun install
-      - run: bun link knip
-      - run: bun knip
+      - run: bun --bun ../knip/packages/knip/dist/cli.js
 
       - name: Test Knip against DefinitelyTyped-tools
         uses: actions/checkout@v3
@@ -53,5 +50,4 @@ jobs:
           repository: microsoft/DefinitelyTyped-tools
           path: DefinitelyTyped-tools
       - run: bun install
-      - run: bun link knip
-      - run: bun knip
+      - run: bun --bun ../knip/packages/knip/dist/cli.js
