@@ -31,7 +31,7 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: 'npm'
-      - run: npm ci
+      - run: npm install typescript@5.0.4
       - run: npm run lint
       - run: npm run build
       - run: npm run knip
