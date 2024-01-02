@@ -118,8 +118,6 @@ Use a configuration like this to compile non-standard files in Svelte projects:
 import sveltePreprocess from 'svelte-preprocess';
 import { preprocess, compile } from 'svelte/compiler';
 
-const sveltePreprocessor = sveltePreprocess();
-
 export default {
   paths: {
     // This ain't pretty, but Svelte basically does the same
@@ -127,16 +125,50 @@ export default {
     '$env/*': ['.svelte-kit/ambient.d.ts'],
   },
   compilers: {
+    // Method 1
     svelte: async (text: string) => {
-      const processed = await preprocess(text, sveltePreprocessor, {
-        filename: 'dummy.ts',
-      });
-      const compiled = compile(processed.code);
-      return compiled.js.code;
+      const js = await compileSvelteCode(text);
+      return js;
+    },
+    // Method 2 (hacky, but detects type imports)
+    svelte: async (text: string) => {
+      const js = await compileSvelteCode(text);
+      let ts = await extractScriptTS(text);
+      // Remove `export` modifiers since these are props, not real exports.
+      ts = ts
+        .replace(/export let/g, 'let')
+        .replace(/export const/g, 'const')
+        .replace(/export class/g, 'class')
+        .replace(/export function/g, 'function');
+      return `${ts}\n${js}`;
     },
     css: (text: string) => [...text.matchAll(/(?<=@)import[^;]+/g)].join('\n'),
   },
 };
+
+const sveltePreprocessor = sveltePreprocess();
+
+/** Compiles a svelte component to pure javascript. Type imports will be discarded. */
+async function compileSvelteCode(text: string) {
+  const processed = await preprocess(text, sveltePreprocessor, {
+    filename: 'dummy.ts',
+  });
+  const compiled = compile(processed.code);
+  return compiled.js.code;
+}
+
+/** Returns the typescript code inside the <script> tag. */
+async function extractScriptTS(text: string) {
+  let ts = '';
+  const preprocessor = sveltePreprocess({
+    typescript({ content }) {
+      ts = content;
+      return { code: '' };
+    },
+  });
+  await preprocess(text, preprocessor, { filename: 'dummy.ts' });
+  return ts;
+}
 ```
 
 The compiler for `.svelte` files in this example is the actual Svelte compiler,
