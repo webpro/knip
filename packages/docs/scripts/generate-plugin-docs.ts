@@ -118,6 +118,7 @@ const tree = u('root', [
       { spread: false, ordered: false },
       plugins.map(plugin =>
         u('listItem', [
+          // @ts-expect-error reusable
           u('link', { title: plugin[0], url: (base === '/' ? '' : base) + `/reference/plugins/${plugin[1]}` }, [
             u('text', plugin[0]),
           ]),

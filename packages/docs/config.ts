@@ -1,8 +1,9 @@
-export const base = '/';
+export const base = '/v4';
 
 export const versions = [
-  ['v4', 'v4 (latest)'],
+  ['v5', 'v5 (latest)'],
+  ['v4', 'v4'],
   ['v3', 'v3'],
 ];
 
-export const defaultVersion = 'v4';
+export const defaultVersion = 'v5';
