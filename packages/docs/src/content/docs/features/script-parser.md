@@ -50,6 +50,10 @@ From this example, Knip automatically adds the following files as entry files:
 By the way, Knip would not add the `exports` if the `dist` folder is matching a
 pattern in a relevant `.gitignore` file or `ignore` option.
 
+### Scripts parsing
+
+When parsing `scripts` entry of `package.json`, `knip` also detects as dependencies parameters that follow `-r`, `--require` or `--loader`. This is done to correctly detect usage of, say, `dotenv` or `tsconfig-paths` packages.
+
 ## Plugins
 
 Some plugins also use the script parser to extract entry files and dependencies
