@@ -40,7 +40,7 @@
     "remark-parse": "11.0.0",
     "remark-preset-webpro": "1.1.0",
     "remark-stringify": "11.0.0",
-    "tsx": "^4.7.2",
+    "tsx": "4.7.1",
     "unified": "11.0.4",
     "unist-builder": "4.0.0",
     "unist-util-visit": "5.0.0"

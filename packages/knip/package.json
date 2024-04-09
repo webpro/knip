@@ -40,7 +40,7 @@
     "lint": "biome lint .",
     "format": "biome format --write .",
     "test": "bun test test/**/*.test.ts",
-    "test:node": "glob -c \"tsx --test --import ./transform-test.js\" \"test/**/*.test.ts\"",
+    "test:node": "glob -c \"node --test --import ./transform-test.js --import tsx/esm\" \"test/**/*.test.ts\"",
     "watch": "npm link && tsc --watch",
     "prebuild": "node rmdir.js dist",
     "build": "tsc",
@@ -97,7 +97,7 @@
     "glob": "^10.3.12",
     "playwright": "^1.43.0",
     "release-it": "^17.1.1",
-    "tsx": "^4.7.2",
+    "tsx": "4.7.1",
     "type-fest": "^4.15.0",
     "typescript": "^5.4.2"
   },
