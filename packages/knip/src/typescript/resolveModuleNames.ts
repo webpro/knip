@@ -40,7 +40,10 @@ export function createCustomModuleResolver(
         : `${containingFile}:${moduleName}`;
       if (resolutionCache.has(key)) return resolutionCache.get(key);
       const resolvedModule = resolveModuleName(moduleName, containingFile);
-      resolutionCache.set(key, resolvedModule);
+      // Don't save resolution misses, because it might be resolved later under a different principal
+      if (resolvedModule) {
+        resolutionCache.set(key, resolvedModule);
+      }
       return resolvedModule;
     });
   }

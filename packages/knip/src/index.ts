@@ -293,9 +293,18 @@ export const main = async (unresolvedConfiguration: CommandLineOptions) => {
     }
   };
 
-  const analyzeSourceFile = (filePath: string, principal: ProjectPrincipal) => {
+  const analyzeSourceFile = (filePath: string | undefined, principal?: ProjectPrincipal | undefined) => {
+    if (!filePath || analyzedFiles.has(filePath)) {
+      return;
+    }
+
     const workspace = chief.findWorkspaceByFilePath(filePath);
-    if (workspace) {
+    principal = principal || !workspace ? principal : factory.getPrincipalByPackageName(workspace.pkgName);
+
+    if (workspace && principal) {
+      // Add to analyzed files early to prevent risk of infinite recursion
+      analyzedFiles.add(filePath);
+
       const { imports, exports, scripts } = principal.analyzeSourceFile(filePath, {
         skipTypeOnly: isStrict,
         isFixExports: fixer.isEnabled && fixer.isFixUnusedExports,
@@ -321,11 +330,9 @@ export const main = async (unresolvedConfiguration: CommandLineOptions) => {
         const specifiers = _getDependenciesFromScripts(scripts, { cwd, manifestScriptNames, dependencies });
         for (const specifier of specifiers) {
           const specifierFilePath = handleReferencedDependency(specifier, filePath, workspace);
-          if (specifierFilePath) internalWorkspaceFilePaths.add(specifierFilePath);
+          analyzeSourceFile(specifierFilePath, principal);
         }
       }
-
-      analyzedFiles.add(filePath);
     }
   };
 
@@ -360,20 +367,19 @@ export const main = async (unresolvedConfiguration: CommandLineOptions) => {
       }
     } while (size !== principal.entryPaths.size);
 
-    for (const specifierFilePath of internalWorkspaceFilePaths) {
-      if (!analyzedFiles.has(specifierFilePath)) {
-        analyzeSourceFile(specifierFilePath, principal);
-      }
-    }
-
     for (const filePath of principal.getUnreferencedFiles()) unreferencedFiles.add(filePath);
     for (const filePath of principal.entryPaths) entryPaths.add(filePath);
 
     principal.reconcileCache(serializableMap);
-
-    // Delete principals including TS programs for GC, except when we still need its `LS.findReferences`
-    if (isSkipLibs && !isWatch) factory.deletePrincipal(principal);
   }
+
+  // Re-analyze files from local workspaces that were referenced, but have not yet been successfully resolved
+  for (const specifierFilePath of internalWorkspaceFilePaths) {
+    analyzeSourceFile(specifierFilePath);
+  }
+
+  // Delete principals including TS programs for GC, except when we still need its `LS.findReferences`
+  if (isSkipLibs && !isWatch) principals.forEach(principal => factory.deletePrincipal(principal));
 
   const isIdentifierReferenced = getIsIdentifierReferencedHandler(serializableMap);
 
