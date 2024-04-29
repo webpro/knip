@@ -379,7 +379,11 @@ export const main = async (unresolvedConfiguration: CommandLineOptions) => {
   }
 
   // Delete principals including TS programs for GC, except when we still need its `LS.findReferences`
-  if (isSkipLibs && !isWatch) principals.forEach(principal => factory.deletePrincipal(principal));
+  if (isSkipLibs && !isWatch) {
+    for (const principal of principals) {
+      factory.deletePrincipal(principal);
+    }
+  }
 
   const isIdentifierReferenced = getIsIdentifierReferencedHandler(serializableMap);
 
