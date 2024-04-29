@@ -1,0 +1,19 @@
+{
+  "files": [],
+  "compilerOptions": {
+    "allowSyntheticDefaultImports": true,
+    "declaration": true,
+    "forceConsistentCasingInFileNames": true,
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "outDir": "dist",
+    "rootDir": "src",
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "ES2022"
+  },
+  "references": [
+    { "path": "packages/workspaceA" },
+    { "path": "packages/workspaceB" },
+  ]
+}
