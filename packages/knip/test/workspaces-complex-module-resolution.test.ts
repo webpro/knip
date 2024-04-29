@@ -16,7 +16,7 @@ test('Resolve modules properly across multiple workspaces', async () => {
 
   assert.deepEqual(counters, {
     ...baseCounters,
-    processed: 5,
-    total: 5,
+    processed: 4,
+    total: 4,
   });
 });
