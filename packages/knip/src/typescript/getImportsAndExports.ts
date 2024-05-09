@@ -228,6 +228,24 @@ const getImportsAndExports = (
           }
         }
       }
+    } else if (ts.isVariableDeclaration(node) && node.initializer && ts.isObjectLiteralExpression(node.initializer)) {
+      // Pattern:
+      // import * as NS from './barrel';
+      // export const id = { NS };
+      for (const property of node.initializer.properties) {
+        if (ts.isShorthandPropertyAssignment(property)) {
+          const id = String(property.name.escapedText);
+          const symbol = sourceFile.locals?.get(id);
+          if (symbol) {
+            const importedSymbolFilePath = importedInternalSymbols.get(symbol);
+            if (importedSymbolFilePath) {
+              const internalImport = internalImports[importedSymbolFilePath];
+              internalImport.isReExport = true;
+              internalImport.isReExportedNs.add([sourceFile.fileName, `${node.name.getText()}.${id}`]);
+            }
+          }
+        }
+      }
     }
 
     const jsDocTags = getJSDocTags(node);
