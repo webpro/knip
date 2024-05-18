@@ -1,10 +1,11 @@
 import { existsSync } from 'node:fs';
 import { isBuiltin } from 'node:module';
 import ts from 'typescript';
-import { DEFAULT_EXTENSIONS } from '../constants.js';
+import { DEFAULT_EXTENSIONS, FOREIGN_FILE_EXTENSIONS } from '../constants.js';
 import { sanitizeSpecifier } from '../util/modules.js';
-import { dirname, extname, isAbsolute, isInNodeModules, isInternal, join } from '../util/path.js';
+import { dirname, extname, isAbsolute, isInNodeModules, join } from '../util/path.js';
 import { resolveSync } from '../util/resolve.js';
+import type { ToSourceFilePath } from '../util/to-source-path.js';
 import { isDeclarationFileExtension } from './ast-helpers.js';
 import { ensureRealFilePath, isVirtualFilePath } from './sys.js';
 
@@ -26,6 +27,7 @@ export function createCustomModuleResolver(
   customSys: typeof ts.sys,
   compilerOptions: ts.CompilerOptions,
   virtualFileExtensions: string[],
+  toSourceFilePath: ToSourceFilePath,
   useCache = true
 ) {
   const extensions = [...DEFAULT_EXTENSIONS, ...virtualFileExtensions];
@@ -46,6 +48,7 @@ export function createCustomModuleResolver(
   /**
    * - Virtual files have built-in or custom compiler, return as JS
    * - Foreign files have path resolved verbatim (file manager will return empty source file)
+   * - For dist/outDir and DTS files an attempt is made to resolve to src path
    */
   function resolveModuleName(name: string, containingFile: string): ts.ResolvedModuleFull | undefined {
     const sanitizedSpecifier = sanitizeSpecifier(name);
@@ -58,8 +61,21 @@ export function createCustomModuleResolver(
       if (resolvedFileName) {
         const ext = extname(resolvedFileName);
         const extension = virtualFileExtensions.includes(ext) ? ts.Extension.Js : ext;
+
+        if (!virtualFileExtensions.includes(ext) && !FOREIGN_FILE_EXTENSIONS.has(ext)) {
+          const srcFilePath = toSourceFilePath(resolvedFileName);
+          if (srcFilePath) {
+            return {
+              resolvedFileName: srcFilePath,
+              extension: extname(srcFilePath),
+              isExternalLibraryImport: false,
+              resolvedUsingTsExtension: false,
+            };
+          }
+        }
+
         return {
-          resolvedFileName: resolvedFileName,
+          resolvedFileName,
           extension,
           isExternalLibraryImport: isInNodeModules(resolvedFileName),
           resolvedUsingTsExtension: false,
@@ -74,37 +90,16 @@ export function createCustomModuleResolver(
       ts.sys
     ).resolvedModule;
 
-    if (
-      tsResolvedModule &&
-      isDeclarationFileExtension(tsResolvedModule.extension) &&
-      isInternal(tsResolvedModule.resolvedFileName)
-    ) {
-      if (tsResolvedModule.extension === '.d.mts') {
-        const resolvedFileName = tsResolvedModule.resolvedFileName.replace(/\.d\.mts$/, '.mjs');
-        return { resolvedFileName, extension: '.mjs', isExternalLibraryImport: false, resolvedUsingTsExtension: false };
-      }
+    if (tsResolvedModule && isDeclarationFileExtension(tsResolvedModule.extension)) {
+      const srcFilePath = toSourceFilePath(tsResolvedModule.resolvedFileName);
 
-      if (tsResolvedModule.extension === '.d.cts') {
-        const resolvedFileName = tsResolvedModule.resolvedFileName.replace(/\.d\.cts$/, '.cjs');
-        return { resolvedFileName, extension: '.cjs', isExternalLibraryImport: false, resolvedUsingTsExtension: false };
-      }
-
-      const base = tsResolvedModule.resolvedFileName.replace(/\.d\.ts$/, '');
-      const baseExt = extname(base);
-
-      if (baseExt && virtualFileExtensions.includes(baseExt)) {
-        const resolvedFileName = ensureRealFilePath(base, virtualFileExtensions);
+      if (srcFilePath) {
         return {
-          resolvedFileName,
-          extension: ts.Extension.Js,
+          resolvedFileName: srcFilePath,
+          extension: extname(srcFilePath),
           isExternalLibraryImport: false,
           resolvedUsingTsExtension: false,
         };
-      }
-
-      for (const ext of ['.js', '.jsx']) {
-        const module = fileExists(base + ext, containingFile);
-        if (module) return module;
       }
 
       return tsResolvedModule;

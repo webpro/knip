@@ -86,6 +86,8 @@ export type Workspace = {
   config: WorkspaceConfiguration;
   manifestPath: string;
   ignoreMembers: IgnorePatterns;
+  srcDir?: string;
+  outDir?: string;
 };
 
 /**

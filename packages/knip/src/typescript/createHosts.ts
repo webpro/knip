@@ -5,6 +5,7 @@ import ts from 'typescript';
 import { getCompilerExtensions } from '../compilers/index.js';
 import type { AsyncCompilers, SyncCompilers } from '../compilers/types.js';
 import { FOREIGN_FILE_EXTENSIONS } from '../constants.js';
+import type { ToSourceFilePath } from '../util/to-source-path.js';
 import { SourceFileManager } from './SourceFileManager.js';
 import { createCustomModuleResolver } from './resolveModuleNames.js';
 import { createCustomSys } from './sys.js';
@@ -17,6 +18,7 @@ type CreateHostsOptions = {
   entryPaths: Set<string>;
   compilers: [SyncCompilers, AsyncCompilers];
   isSkipLibs: boolean;
+  toSourceFilePath: ToSourceFilePath;
   useResolverCache: boolean;
 };
 
@@ -26,12 +28,19 @@ export const createHosts = ({
   entryPaths,
   compilers,
   isSkipLibs,
+  toSourceFilePath,
   useResolverCache,
 }: CreateHostsOptions) => {
   const fileManager = new SourceFileManager({ compilers, isSkipLibs });
   const compilerExtensions = getCompilerExtensions(compilers);
   const sys = createCustomSys(cwd, [...compilerExtensions, ...FOREIGN_FILE_EXTENSIONS]);
-  const resolveModuleNames = createCustomModuleResolver(sys, compilerOptions, compilerExtensions, useResolverCache);
+  const resolveModuleNames = createCustomModuleResolver(
+    sys,
+    compilerOptions,
+    compilerExtensions,
+    toSourceFilePath,
+    useResolverCache
+  );
 
   const languageServiceHost: ts.LanguageServiceHost = {
     getCompilationSettings: () => compilerOptions,

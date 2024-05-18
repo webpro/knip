@@ -22,6 +22,7 @@ import { compact } from './util/array.js';
 import { isStartsLikePackageName, sanitizeSpecifier } from './util/modules.js';
 import { dirname, extname, isInNodeModules, join } from './util/path.js';
 import { deserialize, serialize } from './util/serialize.js';
+import type { ToSourceFilePath } from './util/to-source-path.js';
 
 // These compiler options override local options
 const baseCompilerOptions = {
@@ -107,13 +108,14 @@ export class ProjectPrincipal {
     this.cache = new CacheConsultant(pkgName || ANONYMOUS);
   }
 
-  init() {
+  init(toSourceFilePath: ToSourceFilePath) {
     const { fileManager, compilerHost, resolveModuleNames, languageServiceHost } = createHosts({
       cwd: this.cwd,
       compilerOptions: this.compilerOptions,
       entryPaths: this.entryPaths,
       compilers: [this.syncCompilers, this.asyncCompilers],
       isSkipLibs: this.isSkipLibs,
+      toSourceFilePath,
       useResolverCache: !this.isWatch,
     });
 

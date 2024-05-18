@@ -31,6 +31,7 @@ import { getEntryPathFromManifest, getPackageNameFromModuleSpecifier } from './u
 import { dirname, join, toPosix } from './util/path.js';
 import { hasMatch } from './util/regex.js';
 import { shouldIgnore } from './util/tag.js';
+import { augmentWorkspace, getToSourcePathHandler } from './util/to-source-path.js';
 import { loadTSConfig } from './util/tsconfig-loader.js';
 import { getHasStrictlyNsReferences, getType } from './util/type.js';
 
@@ -64,6 +65,7 @@ export const main = async (unresolvedConfiguration: CommandLineOptions) => {
   const streamer = new ConsoleStreamer({ isEnabled: isShowProgress });
 
   const isGitIgnored = await getGitIgnoredFn({ cwd, gitignore });
+  const toSourceFilePath = getToSourcePathHandler(chief);
 
   streamer.cast('Reading workspace configuration(s)...');
 
@@ -112,7 +114,9 @@ export const main = async (unresolvedConfiguration: CommandLineOptions) => {
     const manifestScripts = Object.values(filteredScripts);
     const manifestScriptNames = new Set(Object.keys(manifest.scripts ?? {}));
 
-    const { compilerOptions, definitionPaths } = await loadTSConfig(join(dir, tsConfigFile ?? 'tsconfig.json'));
+    const { isFile, compilerOptions, definitionPaths } = await loadTSConfig(join(dir, tsConfigFile ?? 'tsconfig.json'));
+
+    if (isFile) augmentWorkspace(workspace, dir, compilerOptions);
 
     const principal = factory.getPrincipal({
       cwd: dir,
@@ -326,7 +330,7 @@ export const main = async (unresolvedConfiguration: CommandLineOptions) => {
   };
 
   for (const principal of principals) {
-    principal.init();
+    principal.init(toSourceFilePath);
 
     for (const [containingFilePath, specifier, workspaceName] of principal.referencedDependencies) {
       const workspace = chief.findWorkspaceByName(workspaceName);
