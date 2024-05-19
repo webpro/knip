@@ -18,7 +18,7 @@ test('Find unused un-built exports across workspaces', async () => {
   assert.deepEqual(counters, {
     ...baseCounters,
     exports: 1,
-    processed: 8,
-    total: 8,
+    processed: 9,
+    total: 9,
   });
 });

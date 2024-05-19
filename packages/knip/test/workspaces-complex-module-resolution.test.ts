@@ -11,7 +11,7 @@ test('Resolve modules properly across multiple workspaces', async () => {
   const { counters } = await main({
     ...baseArguments,
     cwd,
-    isDebug: true,
+    isIsolateWorkspaces: true,
   });
 
   assert.deepEqual(counters, {
