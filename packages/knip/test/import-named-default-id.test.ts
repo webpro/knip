@@ -5,19 +5,20 @@ import { resolve } from '../src/util/path.js';
 import baseArguments from './helpers/baseArguments.js';
 import baseCounters from './helpers/baseCounters.js';
 
-const cwd = resolve('fixtures/imports-namespace-with-nsexports');
+const cwd = resolve('fixtures/import-named-default-id');
 
-test("Don't ignore namespace re-export by entry file (nsExports)", async () => {
-  const { counters } = await main({
+test('Find unused exports by correct name', async () => {
+  const { issues, counters } = await main({
     ...baseArguments,
     cwd,
   });
 
+  assert(issues.exports['utils.ts']['utilOne']);
+
   assert.deepEqual(counters, {
     ...baseCounters,
-    nsExports: 8,
-    unlisted: 1,
-    processed: 8,
-    total: 8,
+    exports: 1,
+    processed: 2,
+    total: 2,
   });
 });

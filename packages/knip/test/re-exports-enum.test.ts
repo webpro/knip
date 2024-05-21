@@ -5,9 +5,9 @@ import { resolve } from '../src/util/path.js';
 import baseArguments from './helpers/baseArguments.js';
 import baseCounters from './helpers/baseCounters.js';
 
-const cwd = resolve('fixtures/imports-namespace-with-nsexports');
+const cwd = resolve('fixtures/re-exports-enum');
 
-test("Don't ignore namespace re-export by entry file (nsExports)", async () => {
+test('Find default re-exported enum', async () => {
   const { counters } = await main({
     ...baseArguments,
     cwd,
@@ -15,9 +15,7 @@ test("Don't ignore namespace re-export by entry file (nsExports)", async () => {
 
   assert.deepEqual(counters, {
     ...baseCounters,
-    nsExports: 8,
-    unlisted: 1,
-    processed: 8,
-    total: 8,
+    processed: 3,
+    total: 3,
   });
 });

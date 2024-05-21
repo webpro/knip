@@ -9,7 +9,7 @@ export default visit(
       // Pattern: require.resolve('specifier')
       if (node.arguments[0] && ts.isStringLiteralLike(node.arguments[0])) {
         const specifier = node.arguments[0].text;
-        if (specifier) return { specifier, identifier: undefined, pos: node.arguments[0].pos };
+        if (specifier) return { specifier, identifier: undefined, pos: node.arguments[0].pos, resolve: true };
       }
     }
   }

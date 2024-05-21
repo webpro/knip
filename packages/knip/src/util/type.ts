@@ -1,7 +1,7 @@
 import type { SerializableImports } from '../types/serializable-map.js';
 
 export const getHasStrictlyNsReferences = (importsForExport?: SerializableImports): [boolean, string?] => {
-  if (!importsForExport?.hasStar || importsForExport.importedNs.size === 0) return [false];
+  if (!importsForExport || importsForExport.importedNs.size === 0) return [false];
   let namespace: string | undefined;
   for (const ns of importsForExport.importedNs) {
     const hasNs = importsForExport.refs.has(ns);

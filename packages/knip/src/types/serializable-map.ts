@@ -11,13 +11,12 @@ type Tags = Set<string>;
 export type SerializableImports = {
   specifier: Specifier;
   refs: References;
-  hasStar: boolean;
+  imported: Set<string>;
   importedAs: Set<[string, string]>;
   importedNs: Set<string>;
-  isReExport: boolean;
-  isReExportedBy: Set<string>;
-  isReExportedAs: Set<[string, string]>;
-  isReExportedNs: Set<[string, string]>;
+  reExportedBy: Map<string, Set<string>>;
+  reExportedAs: Map<string, Set<[string, string]>>;
+  reExportedNs: Map<string, Set<string>>;
 };
 
 export type SerializableImportMap = Record<FilePath, SerializableImports>;

@@ -9,4 +9,5 @@ export interface ImportNode {
   symbol?: ts.Symbol;
   isTypeOnly?: boolean;
   isReExport?: boolean;
+  resolve?: boolean;
 }

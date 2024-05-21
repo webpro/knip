@@ -23,6 +23,8 @@ const fileExists = (name: string, containingFile: string) => {
   }
 };
 
+export type ResolveModuleNames = ReturnType<typeof createCustomModuleResolver>;
+
 export function createCustomModuleResolver(
   customSys: typeof ts.sys,
   compilerOptions: ts.CompilerOptions,
@@ -35,15 +37,18 @@ export function createCustomModuleResolver(
   function resolveModuleNames(moduleNames: string[], containingFile: string): Array<ts.ResolvedModuleFull | undefined> {
     return moduleNames.map(moduleName => {
       if (!useCache) return resolveModuleName(moduleName, containingFile);
+
       const key = moduleName.startsWith('.')
         ? join(dirname(containingFile), moduleName)
         : `${containingFile}:${moduleName}`;
+
       if (resolutionCache.has(key)) return resolutionCache.get(key);
+
       const resolvedModule = resolveModuleName(moduleName, containingFile);
+
       // Don't save resolution misses, because it might be resolved later under a different principal
-      if (resolvedModule) {
-        resolutionCache.set(key, resolvedModule);
-      }
+      if (resolvedModule) resolutionCache.set(key, resolvedModule);
+
       return resolvedModule;
     });
   }

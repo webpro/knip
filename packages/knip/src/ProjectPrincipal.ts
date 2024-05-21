@@ -12,11 +12,11 @@ import type {
   SerializableMap,
   UnresolvedImport,
 } from './types/serializable-map.js';
-import type { BoundSourceFile, ProgramMaybe53 } from './typescript/SourceFile.js';
+import type { BoundSourceFile } from './typescript/SourceFile.js';
 import type { SourceFileManager } from './typescript/SourceFileManager.js';
 import { createHosts } from './typescript/createHosts.js';
 import { type GetImportsAndExportsOptions, _getImportsAndExports } from './typescript/getImportsAndExports.js';
-import type { createCustomModuleResolver } from './typescript/resolveModuleNames.js';
+import type { ResolveModuleNames } from './typescript/resolveModuleNames.js';
 import { timerify } from './util/Performance.js';
 import { compact } from './util/array.js';
 import { isStartsLikePackageName, sanitizeSpecifier } from './util/modules.js';
@@ -79,8 +79,8 @@ export class ProjectPrincipal {
   backend: {
     fileManager: SourceFileManager;
     compilerHost: ts.CompilerHost;
-    resolveModuleNames: ReturnType<typeof createCustomModuleResolver>;
-    program?: ProgramMaybe53;
+    resolveModuleNames: ResolveModuleNames;
+    program?: ts.Program;
     typeChecker?: ts.TypeChecker;
     languageServiceHost: ts.LanguageServiceHost;
   };
@@ -219,21 +219,6 @@ export class ProjectPrincipal {
     return Array.from(this.projectPaths).filter(filePath => !sourceFiles.has(filePath));
   }
 
-  private getResolvedModuleHandler(sourceFile: BoundSourceFile) {
-    const getResolvedModule = this.backend.program?.getResolvedModule;
-    const resolver = getResolvedModule
-      ? (specifier: string) => getResolvedModule(sourceFile, specifier, /* mode */ undefined)
-      : (specifier: string) => sourceFile.resolvedModules?.get(specifier, /* mode */ undefined);
-    if (!this.isWatch) return resolver;
-
-    // TODO It's either this awkward bit in watch mode to handle deleted files, or some large refactoring
-    return (specifier: string) => {
-      const m = resolver(specifier);
-      if (m?.resolvedModule?.resolvedFileName && this.deletedFiles.has(m.resolvedModule.resolvedFileName)) return;
-      return m;
-    };
-  }
-
   public analyzeSourceFile(filePath: string, options: Omit<GetImportsAndExportsOptions, 'skipExports'>) {
     const fd = this.cache.getFileDescriptor(filePath);
     if (!fd.changed && fd.meta?.data) return deserialize(fd.meta.data);
@@ -247,45 +232,38 @@ export class ProjectPrincipal {
 
     const skipExports = this.skipExportsAnalysis.has(filePath);
 
-    const { imports, exports, scripts } = _getImportsAndExports(
-      sourceFile,
-      this.getResolvedModuleHandler(sourceFile),
-      this.backend.typeChecker,
-      { ...options, skipExports }
-    );
+    const resolve = (specifier: string) => this.backend.resolveModuleNames([specifier], sourceFile.fileName)[0];
 
-    const { internal, unresolved, external } = imports;
+    const { imports, exports, scripts } = _getImportsAndExports(sourceFile, resolve, this.backend.typeChecker, {
+      ...options,
+      skipExports,
+    });
+
+    const { internal, resolved, unresolved, external } = imports;
 
     const unresolvedImports = new Set<UnresolvedImport>();
 
+    for (const filePath of resolved) {
+      const isIgnored = this.isGitIgnored(filePath);
+      if (!isIgnored) this.addEntryPath(filePath, { skipExportsAnalysis: true });
+    }
+
     for (const unresolvedImport of unresolved) {
       const { specifier } = unresolvedImport;
-      if (specifier.startsWith('http')) {
-        // Ignore Deno style http import specifiers.
-        continue;
-      }
-      const resolvedModule = this.resolveModule(specifier, filePath);
-      if (resolvedModule) {
-        if (resolvedModule.isExternalLibraryImport) {
-          const sanitizedSpecifier = sanitizeSpecifier(specifier);
-          external.add(sanitizedSpecifier);
-        } else {
-          const isIgnored = this.isGitIgnored(resolvedModule.resolvedFileName);
-          if (!isIgnored) this.addEntryPath(resolvedModule.resolvedFileName, { skipExportsAnalysis: true });
-        }
+
+      // Ignore Deno style http import specifiers
+      if (specifier.startsWith('http')) continue;
+
+      const sanitizedSpecifier = sanitizeSpecifier(specifier);
+      if (isStartsLikePackageName(sanitizedSpecifier)) {
+        external.add(sanitizedSpecifier);
       } else {
-        const sanitizedSpecifier = sanitizeSpecifier(specifier);
-        if (isStartsLikePackageName(sanitizedSpecifier)) {
-          // Should never end up here; maybe a dependency that was not installed.
-          external.add(sanitizedSpecifier);
-        } else {
-          const isIgnored = this.isGitIgnored(join(dirname(filePath), sanitizedSpecifier));
-          if (!isIgnored) {
-            const ext = extname(sanitizedSpecifier);
-            const hasIgnoredExtension = FOREIGN_FILE_EXTENSIONS.has(ext);
-            if (!ext || (ext !== '.json' && !hasIgnoredExtension)) {
-              unresolvedImports.add(unresolvedImport);
-            }
+        const isIgnored = this.isGitIgnored(join(dirname(filePath), sanitizedSpecifier));
+        if (!isIgnored) {
+          const ext = extname(sanitizedSpecifier);
+          const hasIgnoredExtension = FOREIGN_FILE_EXTENSIONS.has(ext);
+          if (!ext || (ext !== '.json' && !hasIgnoredExtension)) {
+            unresolvedImports.add(unresolvedImport);
           }
         }
       }
@@ -305,10 +283,6 @@ export class ProjectPrincipal {
   invalidateFile(filePath: string) {
     this.backend.fileManager.snapshotCache.delete(filePath);
     this.backend.fileManager.sourceFileCache.delete(filePath);
-  }
-
-  public resolveModule(specifier: string, filePath: string = specifier) {
-    return this.backend.resolveModuleNames([specifier], filePath)[0];
   }
 
   public findUnusedMembers(filePath: string, members: SerializableExportMember[]) {

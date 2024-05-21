@@ -34,14 +34,3 @@ export interface BoundSourceFile extends ts.SourceFile {
 
   pragmas?: Map<string, PragmaMap | PragmaMap[]>;
 }
-
-export interface ProgramMaybe53 extends ts.Program {
-  // Only available in TypeScript =>5.3.0
-  getResolvedModule?: (
-    sourceFile: ts.SourceFile,
-    moduleName: string,
-    mode: ts.ResolutionMode
-  ) => ts.ResolvedModuleWithFailedLookupLocations | undefined;
-}
-
-export type GetResolvedModule = (name: string) => ts.ResolvedModuleWithFailedLookupLocations | undefined;

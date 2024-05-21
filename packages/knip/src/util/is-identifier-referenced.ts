@@ -21,19 +21,22 @@ export const getIsIdentifierReferencedHandler = (importedSymbols: SerializableMa
       return false;
     }
 
-    if (importsForExport.refs.has(id)) {
-      exportLookupLog(depth, `referenced ${id} from`, filePath);
+    if (ids.length > 1) {
+      if (importsForExport.refs.has(id)) {
+        exportLookupLog(depth, `referenced ${id} from`, filePath);
+        return true;
+      }
+    }
+
+    if (importsForExport.imported.has(id)) {
+      exportLookupLog(depth, `imported ${id} from`, filePath);
       return true;
     }
 
-    for (const [id, alias] of importsForExport.importedAs) {
-      const [name, ...rest] = ids;
-      if (name === id) {
-        const id = [alias, ...rest].join('.');
-        if (isIdentifierReferenced(filePath, id, importsForExport, depth)) {
-          exportLookupLog(depth, `imported ${name} as ${alias} by`, filePath);
-          return true;
-        }
+    for (const [_id, alias] of importsForExport.importedAs) {
+      if (ids[0] === _id) {
+        exportLookupLog(depth, `imported ${id} as ${alias} by`, filePath);
+        return true;
       }
     }
 
@@ -42,26 +45,60 @@ export const getIsIdentifierReferencedHandler = (importedSymbols: SerializableMa
         exportLookupLog(depth, `imported ${id} on ${ns} from`, filePath);
         return true;
       }
+
+      const reExportedAs = importsForExport.reExportedAs.get(ns);
+
+      if (reExportedAs) {
+        for (const [alias, filePath] of reExportedAs) {
+          const file = importedSymbols[filePath];
+          if (file && isIdentifierReferenced(filePath, alias, file.imported, depth + 1)) {
+            exportLookupLog(depth, `re-exported as ${alias} by`, filePath);
+            return true;
+          }
+        }
+      }
+
+      const reExportedNs = importsForExport.reExportedNs.get(ns);
+
+      if (reExportedNs) {
+        for (const filePath of reExportedNs) {
+          const file = importedSymbols[filePath];
+          if (file && isIdentifierReferenced(filePath, `${ns}.${id}`, file.imported, depth + 1)) {
+            exportLookupLog(depth, `re-exported on ${ns} by`, filePath);
+            return true;
+          }
+        }
+      }
     }
 
-    if (importsForExport.isReExport) {
-      for (const filePath of importsForExport.isReExportedBy) {
+    const reExportedBy = importsForExport.reExportedBy.get(id) ?? importsForExport.reExportedBy.get('*');
+
+    if (reExportedBy) {
+      for (const filePath of reExportedBy) {
         const file = importedSymbols[filePath];
         if (file && isIdentifierReferenced(filePath, id, file.imported, depth + 1)) {
           exportLookupLog(depth, `re-exported ${id} by`, filePath);
           return true;
         }
       }
+    }
 
-      for (const [filePath, alias] of importsForExport.isReExportedAs) {
+    const reExportedAs = importsForExport.reExportedAs.get(ids[0]);
+
+    if (reExportedAs) {
+      for (const [alias, filePath] of reExportedAs) {
+        const [_name, ...rest] = ids;
+        const id = [alias, ...rest].join('.');
         const file = importedSymbols[filePath];
-        if (file && isIdentifierReferenced(filePath, alias, file.imported, depth + 1)) {
+        if (file && isIdentifierReferenced(filePath, id, file.imported, depth + 1)) {
           exportLookupLog(depth, `re-exported as ${alias} by`, filePath);
           return true;
         }
       }
+    }
 
-      for (const [filePath, ns] of importsForExport.isReExportedNs) {
+    for (const [ns, filePaths] of importsForExport.reExportedNs.entries()) {
+      for (const filePath of filePaths) {
         const file = importedSymbols[filePath];
         if (file && isIdentifierReferenced(filePath, `${ns}.${id}`, file.imported, depth + 1)) {
           exportLookupLog(depth, `re-exported on ${ns} by`, filePath);

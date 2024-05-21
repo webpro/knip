@@ -16,7 +16,7 @@ import { timerify } from '../util/Performance.js';
 import { isStartsLikePackageName, sanitizeSpecifier } from '../util/modules.js';
 import { extname, isInNodeModules } from '../util/path.js';
 import { shouldIgnore } from '../util/tag.js';
-import type { BoundSourceFile, GetResolvedModule } from './SourceFile.js';
+import type { BoundSourceFile } from './SourceFile.js';
 import {
   getAccessMembers,
   getDestructuredIds,
@@ -74,7 +74,7 @@ interface AddInternalImportOptions extends ImportNode {
 
 const getImportsAndExports = (
   sourceFile: BoundSourceFile,
-  getResolvedModule: GetResolvedModule,
+  resolveModule: (specifier: string) => ts.ResolvedModuleFull | undefined,
   typeChecker: ts.TypeChecker,
   options: GetImportsAndExportsOptions
 ) => {
@@ -82,6 +82,7 @@ const getImportsAndExports = (
   const internalImports: SerializableImportMap = {};
   const externalImports = new Set<string>();
   const unresolvedImports = new Set<UnresolvedImport>();
+  const resolved = new Set<string>();
   const exports: SerializableExports = {};
   const aliasedExports = new Map<string, IssueSymbol[]>();
   const scripts = new Set<string>();
@@ -91,49 +92,61 @@ const getImportsAndExports = (
   const visitors = getVisitors(sourceFile);
 
   const addInternalImport = (options: AddInternalImportOptions) => {
-    const { identifier, specifier, symbol, filePath, namespace, isReExport } = options;
+    const { identifier, symbol, filePath, namespace, specifier, isReExport } = options;
 
     const isStar = identifier === '*';
 
     // biome-ignore lint/suspicious/noAssignInExpressions: TODO
-    const internalImport = (internalImports[filePath] = internalImports[filePath] ?? {
+    const imports = (internalImports[filePath] = internalImports[filePath] ?? {
       specifier,
-      hasStar: isStar,
-      isReExport,
-      isReExportedBy: new Set(),
-      isReExportedAs: new Set(),
-      isReExportedNs: new Set(),
+      reExportedBy: new Map(),
+      reExportedAs: new Map(),
+      reExportedNs: new Map(),
+      imported: new Set(),
       importedAs: new Set(),
       importedNs: new Set(),
       refs: new Set(),
     });
 
-    if (isStar) internalImport.hasStar = true;
-
     if (isReExport) {
-      internalImport.isReExport = true;
-      if (namespace && isStar) {
-        internalImport.isReExportedNs.add([sourceFile.fileName, namespace]);
+      if (isStar && namespace) {
+        // export * as NS from 'specifier';
+        if (imports.reExportedNs.has(namespace)) {
+          imports.reExportedNs.get(namespace)?.add(sourceFile.fileName);
+        } else {
+          imports.reExportedNs.set(namespace, new Set([sourceFile.fileName]));
+        }
       } else if (namespace) {
-        internalImport.isReExportedAs.add([sourceFile.fileName, namespace]);
+        // export { id as alias } from 'specifier';
+        if (imports.reExportedAs.has(identifier)) {
+          imports.reExportedAs.get(identifier)?.add([namespace, sourceFile.fileName]);
+        } else {
+          imports.reExportedAs.set(identifier, new Set([[namespace, sourceFile.fileName]]));
+        }
       } else {
-        internalImport.isReExportedBy.add(sourceFile.fileName);
+        // export { id } from 'specifier';
+        // export * from 'specifier';
+        if (imports.reExportedBy.has(identifier)) {
+          imports.reExportedBy.get(identifier)?.add(sourceFile.fileName);
+        } else {
+          imports.reExportedBy.set(identifier, new Set([sourceFile.fileName]));
+        }
       }
     }
 
     const alias = symbol ? String(symbol.escapedName) : options.alias;
     if (alias && alias !== identifier) {
       if (isStar) {
-        internalImport.importedNs.add(alias);
+        imports.importedNs.add(alias);
       } else {
-        internalImport.importedAs.add([identifier, alias]);
+        imports.importedAs.add([identifier, alias]);
       }
+    } else if (identifier !== ANONYMOUS && identifier !== '*') {
+      imports.imported.add(identifier);
     }
 
     if (symbol && DEFAULT_EXTENSIONS.includes(extname(sourceFile.fileName))) {
       importedInternalSymbols.set(symbol, filePath);
-    } else {
-      internalImport.refs.add(namespace ?? identifier);
     }
   };
 
@@ -141,16 +154,21 @@ const getImportsAndExports = (
     const { specifier, isTypeOnly, pos, identifier = ANONYMOUS, isReExport = false } = options;
     if (isBuiltin(specifier)) return;
 
-    const module = getResolvedModule(specifier);
+    const module = resolveModule(specifier);
 
-    if (module?.resolvedModule) {
-      const filePath = module.resolvedModule.resolvedFileName;
+    if (module) {
+      const filePath = module.resolvedFileName;
       if (filePath) {
-        if (module.resolvedModule.isExternalLibraryImport) {
-          if (!isInNodeModules(filePath)) {
-            addInternalImport({ ...options, identifier, filePath, isReExport });
-          }
+        if (options.resolve) {
+          resolved.add(filePath);
+          return;
+        }
 
+        if (!isInNodeModules(filePath)) {
+          addInternalImport({ ...options, identifier, filePath, isReExport });
+        }
+
+        if (module.isExternalLibraryImport) {
           if (skipTypeOnly && isTypeOnly) return;
 
           const sanitizedSpecifier = sanitizeSpecifier(specifier);
@@ -159,7 +177,7 @@ const getImportsAndExports = (
             return;
           }
 
-          // TypeScript module resolution may return DTS references or unaliased npm package names,
+          // Module resolver may return DTS references or unaliased npm package names,
           // but in the rest of the program we want the package name based on the original specifier.
           externalImports.add(sanitizedSpecifier);
         } else {
@@ -208,11 +226,21 @@ const getImportsAndExports = (
           const importedSymbolFilePath = importedInternalSymbols.get(symbol);
           if (importedSymbolFilePath) {
             const internalImport = internalImports[importedSymbolFilePath];
-            internalImport.isReExport = true;
             if (symbol.declarations && ts.isNamespaceImport(symbol.declarations[0])) {
-              internalImport.isReExportedNs.add([sourceFile.fileName, node.name.getText()]);
+              // import { id } from 'specifier';
+              // export { id }
+              if (internalImport.reExportedNs.has(identifier)) {
+                internalImport.reExportedNs.get(identifier)?.add(sourceFile.fileName);
+              } else {
+                internalImport.reExportedNs.set(identifier, new Set([sourceFile.fileName]));
+              }
             } else {
-              internalImport.isReExportedAs.add([sourceFile.fileName, node.name.getText()]);
+              const identifier = String(symbol.escapedName);
+              if (internalImport.reExportedAs.has(identifier)) {
+                internalImport.reExportedAs.get(identifier)?.add([node.name.getText(), sourceFile.fileName]);
+              } else {
+                internalImport.reExportedAs.set(identifier, new Set([[node.name.getText(), sourceFile.fileName]]));
+              }
             }
           }
         }
@@ -220,11 +248,24 @@ const getImportsAndExports = (
         const importedSymbolFilePath = importedInternalSymbols.get(symbol);
         if (importedSymbolFilePath) {
           const internalImport = internalImports[importedSymbolFilePath];
-          internalImport.isReExport = true;
           if (isExportAssignment) {
-            internalImport.isReExportedAs.add([sourceFile.fileName, 'default']);
+            // import { id } from 'specifier';
+            // export = id
+            const identifier = String(symbol.escapedName);
+            if (internalImport.reExportedAs.has(identifier)) {
+              internalImport.reExportedAs.get(identifier)?.add(['default', sourceFile.fileName]);
+            } else {
+              internalImport.reExportedAs.set(identifier, new Set([['default', sourceFile.fileName]]));
+            }
           } else {
-            internalImport.isReExportedNs.add([sourceFile.fileName, identifier]);
+            // import * as NS from './3-branch';
+            // export { NS };
+            const identifier = String(symbol.escapedName);
+            if (internalImport.reExportedNs.has(identifier)) {
+              internalImport.reExportedNs.get(identifier)?.add(sourceFile.fileName);
+            } else {
+              internalImport.reExportedNs.set(identifier, new Set([sourceFile.fileName]));
+            }
           }
         }
       }
@@ -323,7 +364,8 @@ const getImportsAndExports = (
             !ts.isNamespaceImport(node.parent)
           ) {
             if (
-              !internalImports[importedSymbolFilePath].importedNs.has(String(node.escapedText)) ||
+              (!internalImports[importedSymbolFilePath].importedNs.has(String(node.escapedText)) &&
+                !internalImports[importedSymbolFilePath].imported.has(String(node.escapedText))) ||
               isConsiderReferencedNS(node)
             ) {
               internalImports[importedSymbolFilePath].refs.add(String(node.escapedText));
@@ -428,6 +470,7 @@ const getImportsAndExports = (
     imports: {
       internal: internalImports,
       external: externalImports,
+      resolved,
       unresolved: unresolvedImports,
     },
     exports: {
