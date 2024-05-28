@@ -9,7 +9,6 @@ import remarkParse from 'remark-parse';
 import remarkStringify from 'remark-stringify';
 import { unified } from 'unified';
 import { u } from 'unist-builder';
-import { base } from '../config.js';
 import type { Plugin } from '../../knip/src/types/plugins.js';
 import type { Root } from 'mdast';
 import type { Node } from 'unist';
@@ -118,8 +117,7 @@ const tree = u('root', [
       { spread: false, ordered: false },
       plugins.map(plugin =>
         u('listItem', [
-          // @ts-expect-error reusable
-          u('link', { title: plugin[0], url: (base === '/' ? '' : base) + `/reference/plugins/${plugin[1]}` }, [
+          u('link', { title: plugin[0], url: `/reference/plugins/${plugin[1]}` }, [
             u('text', plugin[0]),
           ]),
         ])
