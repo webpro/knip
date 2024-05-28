@@ -1,7 +1,6 @@
 import starlight from '@astrojs/starlight';
 import { defineConfig } from 'astro/config';
 import remarkDirective from 'remark-directive';
-import { base } from './config.js';
 import { fixInternalLinks } from './remark/fixInternalLinks.ts';
 import { transformDirectives } from './remark/transformDirectives.ts';
 import type { ExpressiveCodeTheme } from '@astrojs/starlight/expressive-code';
@@ -13,7 +12,7 @@ const setForeground = (theme: ExpressiveCodeTheme, scope: string, value: string)
 
 export default defineConfig({
   site: 'https://knip.dev',
-  base,
+  base: '/',
   // @ts-expect-error TODO
   sitemap: false,
   trailingSlash: 'never',
@@ -35,7 +34,6 @@ export default defineConfig({
       },
       components: {
         Head: './src/components/Head.astro',
-        Header: './src/components/Header.astro',
         Footer: './src/components/Footer.astro',
       },
       customCss: ['./src/styles/custom.css', './src/fonts/font-face.css'],
