@@ -265,7 +265,7 @@ Thanks for reading. If you have been following this guide to create a new
 plugin, this might be the right time to open a pull request!
 
 [1]: ../reference/plugins.md
-[2]: https://github.com/webpro/knip/blob/v3/packages/knip/src/types/plugins.ts
+[2]: https://github.com/webpro/knip/blob/v4/packages/knip/src/types/plugins.ts
 [3]: ../explanations/plugins.md
 [4]: #entry_file_patterns
 [5]: ../explanations/plugins.md#bringing-it-all-together
