@@ -29,7 +29,7 @@ test('Find dependencies with the Jest plugin', async () => {
   assert.deepEqual(counters, {
     ...baseCounters,
     devDependencies: 1,
-    unlisted: 10,
+    unlisted: 11,
     unresolved: 1,
     processed: 6,
     total: 6,
