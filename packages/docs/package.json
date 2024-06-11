@@ -21,27 +21,27 @@
     "qa": "npm run build && npm run lint && npm run remark"
   },
   "dependencies": {
-    "@astrojs/starlight": "0.15.1",
-    "sharp": "0.33.1"
+    "@astrojs/starlight": "0.24.2",
+    "sharp": "0.33.4"
   },
   "devDependencies": {
-    "@astrojs/check": "0.3.4",
+    "@astrojs/check": "0.7.0",
     "@knip/eslint-config": "0.0.0",
-    "@types/mdast": "4.0.3",
+    "@types/mdast": "4.0.4",
     "@types/unist": "3.0.2",
-    "astro": "4.0.8",
+    "astro": "4.10.2",
     "eslint": "8.56.0",
     "hastscript": "8.0.0",
     "kleur": "4.1.5",
     "prettier": "3.1.1",
-    "prettier-plugin-astro": "0.12.3",
-    "remark-cli": "12.0.0",
+    "prettier-plugin-astro": "0.14.0",
+    "remark-cli": "12.0.1",
     "remark-directive": "3.0.0",
     "remark-frontmatter": "5.0.0",
     "remark-parse": "11.0.0",
-    "remark-preset-webpro": "1.0.0",
+    "remark-preset-webpro": "1.1.0",
     "remark-stringify": "11.0.0",
-    "tsx": "4.7.0",
+    "tsx": "4.15.4",
     "unified": "11.0.4",
     "unist-builder": "4.0.0",
     "unist-util-visit": "5.0.0"
