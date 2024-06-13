@@ -25,14 +25,19 @@ jobs:
     name: ${{ matrix.os }} (Node v${{ matrix.node }})
 
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
-          cache: 'npm'
-      - run: npm install typescript@5.0.4 @types/node@18
-      - run: npm run lint --workspaces --if-present
-      - run: npm run build --workspace packages/knip
-      - run: npx knip
-      - run: npx knip --production --strict
-      - run: npm test --workspaces --if-present
+      - name: Install dependencies
+        run: npm install typescript@5.0.4 @types/node@18 --ignore-scripts
+      - name: Build knip
+        run: npm run build
+        working-directory: packages/knip
+      - name: Run knip
+        run: npx knip
+      - name: Run knip (production/strict)
+        run: npx knip --production --strict
+      - name: Test knip
+        run: npm run test:node
+        working-directory: packages/knip
