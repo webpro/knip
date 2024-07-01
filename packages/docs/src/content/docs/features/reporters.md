@@ -9,6 +9,7 @@ Knip provides the following built-in reporters:
 - `codeowners`
 - `compact`
 - `json`
+- `junit`
 - `markdown`
 - `symbol` (default)
 
@@ -74,6 +75,43 @@ The keys match the [reported issue types][1]. Example usage:
 
 ```sh
 knip --reporter json
+```
+
+### JUnit
+
+The built-in `junit` reporter output is meant to be saved to an XML file. This
+can be achieved by providing the `path` value using `--reporter-options`. It
+reports issues in JUnit XML format, which should be readable by CI tools such as
+Bitbucket, Jenkins, etc. For example:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="Knip report" tests="4" failures="4">
+  <testsuite name="Unused files" tests="1" failures="1">
+    <testcase tests="1" failures="1" name="Unused files" classname="src/unused.ts">
+      <failure message="Unused files" type="Unused files">Unused files: src/unused.ts</failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="Unlisted dependencies" tests="2" failures="2">
+    <testcase tests="1" failures="1" name="Unlisted dependencies" classname="src/index.ts">
+      <failure message="Unlisted dependencies - unresolved" type="Unlisted dependencies">Unlisted dependencies: "unresolved" inside src/index.ts</failure>
+    </testcase>
+    <testcase tests="1" failures="1" name="Unlisted dependencies" classname="src/index.ts">
+      <failure message="Unlisted dependencies - @org/unresolved" type="Unlisted dependencies">Unlisted dependencies: "@org/unresolved" inside src/index.ts</failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="Unresolved imports" tests="1" failures="1">
+    <testcase tests="1" failures="1" name="Unresolved imports" classname="src/index.ts:8:23">
+      <failure message="Unresolved imports - ./unresolved" type="Unresolved imports">Unresolved imports: "./unresolved" inside src/index.ts:8:23</failure>
+    </testcase>
+  </testsuite>
+</testsuites>
+```
+
+Example usage:
+
+```sh
+knip --reporter json --reporter-options '{"path": "/test-results/knip.xml"}'
 ```
 
 ### Markdown

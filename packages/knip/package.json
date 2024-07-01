@@ -65,6 +65,7 @@
     "@snyk/github-codeowners": "1.1.0",
     "easy-table": "1.2.0",
     "fast-glob": "^3.3.2",
+    "fast-xml-parser": "4.3.6",
     "jiti": "^1.21.0",
     "js-yaml": "^4.1.0",
     "minimist": "^1.2.8",
